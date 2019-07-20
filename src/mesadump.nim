@@ -2,6 +2,7 @@ import os
 import parseopt
 import strutils
 import terminal
+import times
 
 import nimPNG
 
@@ -19,7 +20,7 @@ when isMainModule:
     dumpSound = false
 
   const
-    Version = "0.3.2"
+    Version = "0.1.0"
     Help = """
 mesadump v""" & Version & '\n' & """
 „because dumping vram into pngs and sound is something we all need in our lives”
@@ -90,7 +91,20 @@ notes:
     dev.attach(player)
     stderr.styledWriteLine(" · playing")
     dev.start()
+    var
+      time = epochTime()
     while true:
       dev.poll()
+      if stderr.isatty:
+        if epochTime() - time > 0.05:
+          stderr.styledWrite(styleDim, styleBright, "   ",
+                             $int(player.pos / player.samples.len * 100), "% ",
+                             resetStyle, styleDim, $player.pos, " / ",
+                             $player.samples.len, "\r")
+          time = epochTime()
+      if player.pos >= player.samples.len:
+        if stderr.isatty:
+          stderr.eraseLine()
+        break
 
   stderr.styledWriteLine(styleBright, fgGreen, " ✓ done!")

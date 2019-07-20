@@ -18,6 +18,3 @@ method sample*(player: Player, dest: var seq[float], count: int) =
       player.pos.inc
     else:
       dest.add([0.0, 0.0])
-  if player.pos >= player.samples.len:
-    stderr.styledWriteLine(styleBright, fgGreen, " ✓ done!")
-    quit(QuitSuccess)
