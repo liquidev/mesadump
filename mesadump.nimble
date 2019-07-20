@@ -12,3 +12,4 @@ bin           = @["mesadump"]
 # Dependencies
 
 requires "nim >= 0.20.0"
+requires "rapid"
