@@ -59,7 +59,7 @@ dump kinds:
 
 garbage:
   mesadump is capable of loading some garbage PNG files into VRAM so that
-  they're very likely to be included in your mesadump. usage:
+  they're more likely to be included in your mesadump. usage:
     $1 --garbage:list_of_files.png:separated_by_colons.png
 
 notes:
