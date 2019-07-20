@@ -3,9 +3,6 @@ import parseopt
 import strutils
 import terminal
 
-import rapid/lib/glad/gl
-import rapid/gfx
-import rapid/res/textures
 import nimPNG
 
 include audioplayer
