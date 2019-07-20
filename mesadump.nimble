@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.3.1"
+version       = "0.2.0"
 author        = "liquid600pgm"
 description   = "because dumping vram into pngs and sound is something we all need in our lives"
 license       = "GPL-3.0"

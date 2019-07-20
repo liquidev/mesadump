@@ -10,6 +10,11 @@ include audioplayer
 include dump
 
 when isMainModule:
+  type
+    ArgMode = enum
+      argGarbage
+      argOutput
+
   var
     dumpWidth = 256
     dumpHeight = 256
@@ -17,62 +22,77 @@ when isMainModule:
     dumpFilename = "mesadump.png"
     dumpFlip = true
     garbage: seq[string]
+    repeatGarbage = 2
     dumpSound = false
 
   const
-    Version = "0.1.0"
-    Help = """
+    Version = "0.2.1"
+    GeneralHelp = """
 mesadump v""" & Version & '\n' & """
 „because dumping vram into pngs and sound is something we all need in our lives”
 
 usage:
-  $1 [options] [filename.png]
+  $1 [options] [--] [output file]
   default filename: mesadump.png
 
 options:
-  -w:256 --width:256      set the width of the dump
-  -h:256 --height:256     set the height of the dump
-  -k:rgb --kind:rgb       set what to dump
-  --flip:n                flip the dump vertically
-  --garbage:[files]       see below
-  -s, --sound             play as sound instead of saving to a file
-
-dump kinds:
-  png format  |  dump kind
-  ----------  |  --------------------------
-  grayscale   |  stencil, depth
-  rgb         |  red, green, blue, rgb, bgr
-  rgba        |  rgba, bgra, depth+stencil
-
+  --help.[topic]       get help about a specific topic
+  -v --version         print the version
+  -w:256 --width:256   set the width of the dump
+  -h:256 --height:256  set the height of the dump
+  -k:rgb --kind:rgb    set what to dump, see --help.dumpKind
+  --flip:n             flip the dump vertically
+  --garbage [files]    see --help.garbage
+  --repeatGarbage:2    load garbage this many times
+  -s, --sound          play as sound instead of saving to a file"""
+    DumpKindHelp = """
+available dumps:
+  png format | dump kind
+  ---------- | --------------------------
+  grayscale  | stencil, depth
+  rgb        | red, green, blue, rgb, bgr
+  rgba       | rgba, bgra, depth+stencil"""
+    GarbageHelp = """
 garbage:
-  mesadump is capable of loading some garbage PNG files into VRAM so that
+  mesadump is capable of loading some garbage png files into vram so that
   they're more likely to be included in your mesadump. usage:
-    $1 --garbage:list_of_files.png:separated_by_colons.png
+    $1 --garbage list_of_files.png separated_by_spaces.png -- out.png
+  one can also specify the number of times a specific texture should be loaded
+  into vram, using the --repeatGarbage option."""
+    VersionInfo = """
+mesadump v""" & Version & '\n' & """
+copyright (c) iLiquid, 2019
 
-notes:
-  · this only works on mesa drivers, on nvidia this will produce blank images
-    since the driver clears freshly created textures and renderbuffers
-  · the depth+stencil kind is special, it will dump the depth buffer into the
-    rgb channels and the stencil buffer into the alpha channel"""
+this open-source software comes with absolutely no warranty!
+read the license here:
+  https://github.com/liquid600pgm/mesadump/blob/master/LICENSE
+"""
 
   stderr.styledWriteLine(styleBright, "mesadump v" & Version)
 
+  var argMode = argOutput
   for kind, key, val in getopt(commandLineParams()):
     if kind in {cmdShortOption, cmdLongOption}:
       case key
-      of "help": quit(Help % [paramStr(0)], QuitSuccess)
+      of "": argMode = argOutput
+      of "help": quit(GeneralHelp % [paramStr(0)], QuitSuccess)
+      of "help.dumpKind": quit(DumpKindHelp, QuitSuccess)
+      of "help.garbage": quit(GarbageHelp, QuitSuccess)
+      of "v", "version": quit(VersionInfo, QuitSuccess)
       of "w", "width": dumpWidth = val.parseInt
       of "h", "height": dumpHeight = val.parseInt
       of "k", "kind": dumpKind = val.parseEnum[:DumpKind]
       of "flip": dumpFlip = val.parseBool
-      of "garbage":
-        for file in split(val, ':'):
-          garbage.add(file)
+      of "garbage": argMode = argGarbage
+      of "repeatGarbage": repeatGarbage = val.parseInt
       of "s", "sound": dumpSound = true
     elif kind == cmdArgument:
-      dumpFilename = key
+      case argMode
+      of argOutput: dumpFilename = key
+      of argGarbage: garbage.add(key)
 
-  let dump = mesadump(dumpWidth, dumpHeight, dumpKind, dumpFlip, garbage)
+  let dump = mesadump(dumpWidth, dumpHeight, dumpKind, dumpFlip,
+                      garbage, repeatGarbage)
 
   if not dumpSound:
     stderr.styledWriteLine(" · saving png")

@@ -1,4 +1,8 @@
+import os
+import terminal
+
 import rapid/gfx
+import rapid/res/images
 import rapid/res/textures
 import rapid/lib/glad/gl
 
@@ -15,12 +19,15 @@ type
     dtRgba = "rgba"
     dtBgra = "bgra"
 
-proc log(text: varargs[string]) =
+template log(text: varargs[untyped]) =
   when not defined(mesadumpNoLogging):
-    stderr.writeLine(text)
+    stderr.styledWrite(text)
+
+template logln(text: varargs[untyped]) =
+  log(text, "\n")
 
 proc mesadump*(width, height: int, kind: DumpKind, flip: bool,
-               garbage: openarray[string]): string =
+               garbage: openarray[string], repeatGarbage: int): string =
   let
     pixelSize =
       case kind
@@ -29,7 +36,7 @@ proc mesadump*(width, height: int, kind: DumpKind, flip: bool,
       of dtDepthStencil, dtRgba, dtBgra: 4
     dataSize = width * height * pixelSize
 
-  log(" · creating window and canvas")
+  logln(" · creating window and canvas")
 
   var
     window = initRWindow()
@@ -39,18 +46,29 @@ proc mesadump*(width, height: int, kind: DumpKind, flip: bool,
       .open() # this is just to obtain an OpenGL context
     sur = window.openGfx()
 
-  log(" · loading garbage")
+  logln(" · loading garbage")
 
   for file in garbage:
-    when defined(cli):
-      stderr.styledWriteLine(styleDim, "   ", file)
-    discard loadRTexture(file)
+    var success = false
+    if existsFile(file):
+      let img = loadRImage(file)
+      if not img.isNil:
+        for i in 1..repeatGarbage:
+          log(styleDim, "   ", file, "  ", $i, "/", $repeatGarbage, "\r")
+          discard newRTexture(img)
+        success = true
+    if success:
+      if not defined(mesadumpNoLogging): stderr.eraseLine()
+      logln(styleDim, "   ", file, "  ", resetStyle, fgGreen, "✓")
+    else:
+      if not defined(mesadumpNoLogging): stderr.eraseLine()
+      logln(styleDim, "   ", file, "  ", resetStyle, fgRed, "✗")
 
   var
     canvas = newRCanvas(width.float, height.float)
     data = newSeq[uint8](dataSize)
 
-  log(" · reading the canvas")
+  logln(" · reading the canvas")
 
   render(sur, ctx):
     ctx.begin()
@@ -76,7 +94,7 @@ proc mesadump*(width, height: int, kind: DumpKind, flip: bool,
 
   case kind
   of dtRed, dtGreen, dtBlue:
-    log(" · converting the dumped pixels into rgb")
+    logln(" · converting the dumped pixels into rgb")
     for i in 0..<width * height:
       let pix = cast[char](data[i])
       result.add(case kind
@@ -89,7 +107,7 @@ proc mesadump*(width, height: int, kind: DumpKind, flip: bool,
     copyMem(result[0].unsafeAddr, data[0].unsafeAddr, dataSize)
 
   if flip:
-    log(" · flipping the image")
+    logln(" · flipping the image")
     let oldData = result
     result = ""
     for y in countdown(height - 1, 0):
